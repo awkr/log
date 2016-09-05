@@ -10,6 +10,8 @@ func TestLog(t *testing.T) {
 
 	Errorf("hello %s", "error")
 
+	EnableColor(false)
+
 	Fatal("oops")
 
 	Info("hello info 2")
