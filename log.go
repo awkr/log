@@ -48,14 +48,14 @@ func EnableColor(flag bool) {
 	enableColor = flag
 }
 
-func Debug(msg string) {
+func Debug(msg interface{}) {
 	if logLevel > LevelDebug {
 		return
 	}
 	if enableColor {
-		fmt.Printf("%s %sDEBUG%s %s\n", timestamp(), levelColors[LevelDebug], colorWhite, msg)
+		fmt.Printf("%s %sDEBUG%s %v\n", timestamp(), levelColors[LevelDebug], colorWhite, msg)
 	} else {
-		fmt.Printf("%s DEBUG %s\n", timestamp(), msg)
+		fmt.Printf("%s DEBUG %v\n", timestamp(), msg)
 	}
 }
 
@@ -72,14 +72,14 @@ func Debugf(format string, v ...interface{}) {
 	}
 }
 
-func Info(msg string) {
+func Info(msg interface{}) {
 	if logLevel > LevelInfo {
 		return
 	}
 	if enableColor {
-		fmt.Printf("%s %s%-5s%s %s\n", timestamp(), levelColors[LevelInfo], levelName(LevelInfo), colorWhite, msg)
+		fmt.Printf("%s %s%-5s%s %v\n", timestamp(), levelColors[LevelInfo], levelName(LevelInfo), colorWhite, msg)
 	} else {
-		fmt.Printf("%s %-5s %s\n", timestamp(), levelName(LevelInfo), msg)
+		fmt.Printf("%s %-5s %v\n", timestamp(), levelName(LevelInfo), msg)
 	}
 }
 
@@ -95,11 +95,11 @@ func Infof(format string, v ...interface{}) {
 	fmt.Printf(format, v...)
 }
 
-func Warn(msg string) {
+func Warn(msg interface{}) {
 	if enableColor {
-		fmt.Printf("%s %s%-5s%s %s\n", timestamp(), levelColors[LevelWarn], levelName(LevelWarn), colorWhite, msg)
+		fmt.Printf("%s %s%-5s%s %v\n", timestamp(), levelColors[LevelWarn], levelName(LevelWarn), colorWhite, msg)
 	} else {
-		fmt.Printf("%s %-5s %s\n", timestamp(), levelName(LevelWarn), msg)
+		fmt.Printf("%s %-5s %v\n", timestamp(), levelName(LevelWarn), msg)
 	}
 }
 
@@ -112,11 +112,11 @@ func Warnf(format string, v ...interface{}) {
 	fmt.Printf(format, v...)
 }
 
-func Error(msg string) {
+func Error(msg interface{}) {
 	if enableColor {
-		fmt.Printf("%s %sERROR%s %s\n", timestamp(), levelColors[LevelError], colorWhite, msg)
+		fmt.Printf("%s %sERROR%s %v\n", timestamp(), levelColors[LevelError], colorWhite, msg)
 	} else {
-		fmt.Printf("%s ERROR %s\n", timestamp(), msg)
+		fmt.Printf("%s ERROR %v\n", timestamp(), msg)
 	}
 }
 
@@ -129,11 +129,11 @@ func Errorf(format string, v ...interface{}) {
 	fmt.Printf(format, v...)
 }
 
-func Fatal(msg string) {
+func Fatal(msg interface{}) {
 	if enableColor {
-		fmt.Printf("%s %sFATAL%s %s\n", timestamp(), levelColors[LevelFatal], colorWhite, msg)
+		fmt.Printf("%s %sFATAL%s %v\n", timestamp(), levelColors[LevelFatal], colorWhite, msg)
 	} else {
-		fmt.Printf("%s FATAL %s\n", timestamp(), msg)
+		fmt.Printf("%s FATAL %v\n", timestamp(), msg)
 	}
 	os.Exit(1)
 }
