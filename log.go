@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -42,6 +43,11 @@ var (
 
 func SetLevel(level LogLevel) {
 	logLevel = level
+}
+
+func SetLevelStr(level string) {
+	level = strings.ToUpper(level)
+	SetLevel(levelFromName(level))
 }
 
 func EnableColor(flag bool) {
@@ -162,6 +168,23 @@ func levelName(level LogLevel) string {
 		return "FATAL"
 	default:
 		return "UNKNOWN"
+	}
+}
+
+func levelFromName(level string) LogLevel {
+	switch level {
+	case "DEBUG":
+		return LevelDebug
+	case "INFO":
+		return LevelInfo
+	case "WARN":
+		return LevelWarn
+	case "ERROR":
+		return LevelError
+	case "FATAL":
+		return LevelFatal
+	default:
+		return LevelInfo // if no level matched, set INFO as default
 	}
 }
 
