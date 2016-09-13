@@ -12,7 +12,15 @@ func TestLog(t *testing.T) {
 
 	EnableColor(false)
 
-	Fatal("oops")
+	Fatal("oops: color diabled")
 
 	Info("hello info 2")
+}
+
+func TestLogFile(t *testing.T) {
+	SetLogFile("test.log")
+
+	Debug("i'm debug")
+	Info("i'm info")
+	Errorf("-->%s<--", "i'm errorf")
 }

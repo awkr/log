@@ -43,6 +43,9 @@ var (
 	}
 
 	isTerm bool
+
+	shouldLogFile bool
+	logFile       *os.File
 )
 
 func SetLevel(level LogLevel) {
@@ -54,6 +57,18 @@ func SetLevelStr(level string) {
 	SetLevel(levelFromName(level))
 }
 
+func SetLogFile(f string) error {
+	shouldLogFile = true
+
+	file, err := os.OpenFile(f, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	logFile = file
+	return nil
+}
+
 func EnableColor(flag bool) {
 	flag = flag && isTerm
 	enableColor = flag
@@ -63,100 +78,76 @@ func Debug(msg interface{}) {
 	if logLevel > LevelDebug {
 		return
 	}
-	if enableColor {
-		fmt.Printf("%s %sDEBUG%s %v\n", timestamp(), levelColors[LevelDebug], colorWhite, msg)
-	} else {
-		fmt.Printf("%s DEBUG %v\n", timestamp(), msg)
-	}
+
+	doLog(LevelDebug, "%v", msg)
 }
 
 func Debugf(format string, v ...interface{}) {
 	if logLevel > LevelDebug {
 		return
 	}
-	if enableColor {
-		format = fmt.Sprintf("%s %sDEBUG%s %s\n", timestamp(), levelColors[LevelDebug], colorWhite, format)
-		fmt.Printf(format, v...)
-	} else {
-		format = fmt.Sprintf("%s DEBUG %s\n", timestamp(), format)
-		fmt.Printf(format, v...)
-	}
+	doLog(LevelDebug, format, v...)
 }
 
 func Info(msg interface{}) {
 	if logLevel > LevelInfo {
 		return
 	}
-	if enableColor {
-		fmt.Printf("%s %s%-5s%s %v\n", timestamp(), levelColors[LevelInfo], levelName(LevelInfo), colorWhite, msg)
-	} else {
-		fmt.Printf("%s %-5s %v\n", timestamp(), levelName(LevelInfo), msg)
-	}
+
+	doLog(LevelInfo, "%v", msg)
 }
 
 func Infof(format string, v ...interface{}) {
 	if logLevel > LevelInfo {
 		return
 	}
-	if enableColor {
-		format = fmt.Sprintf("%s %s%-5s%s %s\n", timestamp(), levelColors[LevelInfo], levelName(LevelInfo), colorWhite, format)
-	} else {
-		format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(LevelInfo), format)
-	}
-	fmt.Printf(format, v...)
+	doLog(LevelInfo, format, v...)
 }
 
 func Warn(msg interface{}) {
-	if enableColor {
-		fmt.Printf("%s %s%-5s%s %v\n", timestamp(), levelColors[LevelWarn], levelName(LevelWarn), colorWhite, msg)
-	} else {
-		fmt.Printf("%s %-5s %v\n", timestamp(), levelName(LevelWarn), msg)
-	}
+	doLog(LevelWarn, "%v", msg)
 }
 
 func Warnf(format string, v ...interface{}) {
-	if enableColor {
-		format = fmt.Sprintf("%s %s%-5s%s %s\n", timestamp(), levelColors[LevelWarn], levelName(LevelWarn), colorWhite, format)
-	} else {
-		format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(LevelWarn), format)
-	}
-	fmt.Printf(format, v...)
+	doLog(LevelWarn, format, v...)
 }
 
 func Error(msg interface{}) {
-	if enableColor {
-		fmt.Printf("%s %sERROR%s %v\n", timestamp(), levelColors[LevelError], colorWhite, msg)
-	} else {
-		fmt.Printf("%s ERROR %v\n", timestamp(), msg)
-	}
+	doLog(LevelError, "%v", msg)
 }
 
 func Errorf(format string, v ...interface{}) {
-	if enableColor {
-		format = fmt.Sprintf("%s %sERROR%s %s\n", timestamp(), levelColors[LevelError], colorWhite, format)
-	} else {
-		format = fmt.Sprintf("%s ERROR %s\n", timestamp(), format)
-	}
-	fmt.Printf(format, v...)
+	doLog(LevelError, format, v...)
 }
 
 func Fatal(msg interface{}) {
-	if enableColor {
-		fmt.Printf("%s %sFATAL%s %v\n", timestamp(), levelColors[LevelFatal], colorWhite, msg)
-	} else {
-		fmt.Printf("%s FATAL %v\n", timestamp(), msg)
-	}
+	doLog(LevelFatal, "%v", msg)
+
 	os.Exit(1)
 }
 
 func Fatalf(format string, v ...interface{}) {
-	if enableColor {
-		format = fmt.Sprintf("%s %sFATAL%s %s\n", timestamp(), levelColors[LevelFatal], colorWhite, format)
-	} else {
-		format = fmt.Sprintf("%s FATAL %s\n", timestamp(), format)
-	}
-	fmt.Printf(format, v...)
+	doLog(LevelFatal, format, v...)
+
 	os.Exit(1)
+}
+
+// format is original format
+func doLog(level LogLevel, format string, msg ...interface{}) {
+	if shouldLogFile {
+		if logFile != nil {
+			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
+			fmt.Fprintf(logFile, format, msg...)
+		}
+	} else {
+		if enableColor {
+			format = fmt.Sprintf("%s %s%-5s%s %s\n", timestamp(), levelColors[level], levelName(level), colorWhite, format)
+		} else {
+			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
+		}
+
+		fmt.Printf(format, msg...)
+	}
 }
 
 func levelName(level LogLevel) string {
