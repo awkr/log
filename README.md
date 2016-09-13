@@ -1,3 +1,9 @@
+## Note
+
+* logging to file is not compatible with logging to folder.
+
+  logging to file has a higher priority and if setted, logging to folder will be ignored
+
 ## TODO
 
 1. [x] color support
