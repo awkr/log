@@ -3,7 +3,7 @@ package log
 import "testing"
 
 func TestLog(t *testing.T) {
-	SetLevel(LevelInfo)
+	Setup(&LogConfig{MinLevel: LevelDebug})
 
 	Debug("hello debug")
 	Info("hello info")
@@ -18,7 +18,15 @@ func TestLog(t *testing.T) {
 }
 
 func TestLogFile(t *testing.T) {
-	SetLogFile("test.log")
+	Setup(&LogConfig{File: "test.log"})
+
+	Debug("i'm debug")
+	Info("i'm info")
+	Errorf("-->%s<--", "i'm errorf")
+}
+
+func TestLogFolder(t *testing.T) {
+	Setup(&LogConfig{Folder: "output/log", LogFileByLevel: true})
 
 	Debug("i'm debug")
 	Info("i'm info")
