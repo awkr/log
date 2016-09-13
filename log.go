@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type LogLevel int16
@@ -39,6 +41,8 @@ var (
 		LevelError: colorLightRed,
 		LevelFatal: colorRed,
 	}
+
+	isTerm bool
 )
 
 func SetLevel(level LogLevel) {
@@ -51,6 +55,7 @@ func SetLevelStr(level string) {
 }
 
 func EnableColor(flag bool) {
+	flag = flag && isTerm
 	enableColor = flag
 }
 
@@ -190,4 +195,9 @@ func levelFromName(level string) LogLevel {
 
 func timestamp() string {
 	return time.Now().Local().Format("2006/01/02 15:04:05.000")
+}
+
+func init() {
+	isTerm = terminal.IsTerminal(int(os.Stdout.Fd()))
+	EnableColor(isTerm)
 }
