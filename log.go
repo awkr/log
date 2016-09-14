@@ -31,6 +31,14 @@ const (
 )
 
 var (
+	levelNames = map[LogLevel]string{
+		LevelDebug: "DEBUG",
+		LevelInfo:  "INFO",
+		LevelWarn:  "WARN",
+		LevelError: "ERROR",
+		LevelFatal: "FATAL",
+	}
+
 	levelColors = map[LogLevel]string{
 		LevelDebug: colorBlue,
 		LevelInfo:  colorGreen,
@@ -167,15 +175,17 @@ func Fatalf(format string, v ...interface{}) {
 
 // format is original format
 func doLog(level LogLevel, format string, msg ...interface{}) error {
+	levelName := levelNames[level]
+
 	if logFile != nil { // log to the specified file
-		format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
+		format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
 		fmt.Fprintf(logFile, format, msg...)
 	} else if shouldLogFolder { // log to folder
 		if cfg.LogFileByLevel {
 			f, ok := logFolderFiles[level]
 			if !ok {
 				// create log file
-				filename := filepath.Join(cfg.Folder, fmt.Sprintf("%s.log", strings.ToLower(levelName(level))))
+				filename := filepath.Join(cfg.Folder, fmt.Sprintf("%s.log", strings.ToLower(levelName)))
 				file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm)
 				if err != nil {
 					return err
@@ -185,42 +195,25 @@ func doLog(level LogLevel, format string, msg ...interface{}) error {
 				logFolderFiles[level] = f
 			}
 
-			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
+			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
 			fmt.Fprintf(f, format, msg...)
 		} else {
 			if logFolderFile != nil {
-				format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
+				format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
 				fmt.Fprintf(logFolderFile, format, msg...)
 			}
 		}
 	} else { // log to terminal or redirect
 		if cfg.EnableColor {
-			format = fmt.Sprintf("%s %s%-5s%s %s\n", timestamp(), levelColors[level], levelName(level), colorWhite, format)
+			format = fmt.Sprintf("%s %s%-5s%s %s\n", timestamp(), levelColors[level], levelName, colorWhite, format)
 		} else {
-			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
+			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
 		}
 
 		fmt.Printf(format, msg...)
 	}
 
 	return nil
-}
-
-func levelName(level LogLevel) string {
-	switch level {
-	case LevelDebug:
-		return "DEBUG"
-	case LevelInfo:
-		return "INFO"
-	case LevelWarn:
-		return "WARN"
-	case LevelError:
-		return "ERROR"
-	case LevelFatal:
-		return "FATAL"
-	default:
-		return "UNKNOWN"
-	}
 }
 
 func levelFromName(level string) LogLevel {
