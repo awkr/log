@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh/terminal"
@@ -177,7 +178,7 @@ func doLog(level LogLevel, format string, msg ...interface{}) error {
 			f, ok := logFolderFiles[level]
 			if !ok {
 				// create log file
-				filename := filepath.Join(cfg.Folder, fmt.Sprintf("%s.log", levelName(level)))
+				filename := filepath.Join(cfg.Folder, fmt.Sprintf("%s.log", strings.ToLower(levelName(level))))
 				file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm)
 				if err != nil {
 					return err
