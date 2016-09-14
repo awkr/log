@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,10 +30,14 @@ const (
 	colorRed      = "\x1b[31m"
 )
 
-// 最小level，默认为LevelDebug
 var (
-	logLevel    = LevelDebug
-	enableColor = true
+	levelNames = map[LogLevel]string{
+		LevelDebug: "DEBUG",
+		LevelInfo:  "INFO",
+		LevelWarn:  "WARN",
+		LevelError: "ERROR",
+		LevelFatal: "FATAL",
+	}
 
 	levelColors = map[LogLevel]string{
 		LevelDebug: colorBlue,
@@ -44,38 +49,74 @@ var (
 
 	isTerm bool
 
-	shouldLogFile bool
-	logFile       *os.File
+	logFile *os.File
+
+	shouldLogFolder bool
+	logFolderFiles  = make(map[LogLevel]*os.File)
+	logFolderFile   *os.File
 )
 
-func SetLevel(level LogLevel) {
-	logLevel = level
+type LogConfig struct {
+	MinLevel    LogLevel
+	EnableColor bool
+
+	// file and folder are not compatible
+	// file has a higher priority. if setted, folder will be ignored
+	File string
+
+	Folder         string
+	LogFileByLevel bool
 }
 
-func SetLevelStr(level string) {
-	level = strings.ToUpper(level)
-	SetLevel(levelFromName(level))
-}
+var (
+	cfg *LogConfig
+)
 
-func SetLogFile(f string) error {
-	shouldLogFile = true
-
-	file, err := os.OpenFile(f, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm)
-	if err != nil {
-		return err
+func Setup(conf *LogConfig) error {
+	if conf == nil {
+		conf = &LogConfig{MinLevel: LevelDebug, EnableColor: true} // default
 	}
 
-	logFile = file
-	return nil
+	if cfg != nil {
+		conf.EnableColor = cfg.EnableColor
+	}
+
+	cfg = conf
+
+	var err error
+
+	if cfg.File != "" {
+		if logFile, err = os.OpenFile(cfg.File, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm); err != nil {
+			return err
+		}
+	} else if cfg.Folder != "" {
+		if err = os.MkdirAll(cfg.Folder, os.ModePerm); err != nil {
+			return err
+		}
+
+		if !cfg.LogFileByLevel {
+			filename := filepath.Join(cfg.Folder, "log.log")
+			if logFolderFile, err = os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm); err != nil {
+				return err
+			}
+		}
+
+		shouldLogFolder = true
+	}
+
+	return err
 }
 
 func EnableColor(flag bool) {
-	flag = flag && isTerm
-	enableColor = flag
+	if cfg == nil {
+		cfg = &LogConfig{MinLevel: LevelDebug}
+	}
+
+	cfg.EnableColor = (flag && isTerm)
 }
 
 func Debug(msg interface{}) {
-	if logLevel > LevelDebug {
+	if cfg.MinLevel > LevelDebug {
 		return
 	}
 
@@ -83,14 +124,14 @@ func Debug(msg interface{}) {
 }
 
 func Debugf(format string, v ...interface{}) {
-	if logLevel > LevelDebug {
+	if cfg.MinLevel > LevelDebug {
 		return
 	}
 	doLog(LevelDebug, format, v...)
 }
 
 func Info(msg interface{}) {
-	if logLevel > LevelInfo {
+	if cfg.MinLevel > LevelInfo {
 		return
 	}
 
@@ -98,7 +139,7 @@ func Info(msg interface{}) {
 }
 
 func Infof(format string, v ...interface{}) {
-	if logLevel > LevelInfo {
+	if cfg.MinLevel > LevelInfo {
 		return
 	}
 	doLog(LevelInfo, format, v...)
@@ -133,38 +174,46 @@ func Fatalf(format string, v ...interface{}) {
 }
 
 // format is original format
-func doLog(level LogLevel, format string, msg ...interface{}) {
-	if shouldLogFile {
-		if logFile != nil {
-			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
-			fmt.Fprintf(logFile, format, msg...)
-		}
-	} else {
-		if enableColor {
-			format = fmt.Sprintf("%s %s%-5s%s %s\n", timestamp(), levelColors[level], levelName(level), colorWhite, format)
+func doLog(level LogLevel, format string, msg ...interface{}) error {
+	levelName := levelNames[level]
+
+	if logFile != nil { // log to the specified file
+		format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
+		fmt.Fprintf(logFile, format, msg...)
+	} else if shouldLogFolder { // log to folder
+		if cfg.LogFileByLevel {
+			f, ok := logFolderFiles[level]
+			if !ok {
+				// create log file
+				filename := filepath.Join(cfg.Folder, fmt.Sprintf("%s.log", strings.ToLower(levelName)))
+				file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm)
+				if err != nil {
+					return err
+				}
+
+				f = file
+				logFolderFiles[level] = f
+			}
+
+			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
+			fmt.Fprintf(f, format, msg...)
 		} else {
-			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName(level), format)
+			if logFolderFile != nil {
+				format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
+				fmt.Fprintf(logFolderFile, format, msg...)
+			}
+		}
+	} else { // log to terminal or redirect
+		if cfg.EnableColor {
+			format = fmt.Sprintf("%s %s%-5s%s %s\n", timestamp(), levelColors[level], levelName, colorWhite, format)
+		} else {
+			format = fmt.Sprintf("%s %-5s %s\n", timestamp(), levelName, format)
 		}
 
 		fmt.Printf(format, msg...)
 	}
-}
 
-func levelName(level LogLevel) string {
-	switch level {
-	case LevelDebug:
-		return "DEBUG"
-	case LevelInfo:
-		return "INFO"
-	case LevelWarn:
-		return "WARN"
-	case LevelError:
-		return "ERROR"
-	case LevelFatal:
-		return "FATAL"
-	default:
-		return "UNKNOWN"
-	}
+	return nil
 }
 
 func levelFromName(level string) LogLevel {
